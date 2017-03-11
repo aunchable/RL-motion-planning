@@ -49,3 +49,14 @@ class GridWorld2D(object):
 
     def display_world(self):
         # Prints out world in nice 2d format
+
+    def get_state():
+        i, j = self.robot_loc
+        state = np.zeros((5,5))
+        for r in state:
+            for c in state[i]:
+                try:
+                    state[r,c] = self.world[i - 2 + r,j - 2 + r]
+                except:
+                    continue
+        return np.append(np.flatten(state), self.get_distance_to_goal())
