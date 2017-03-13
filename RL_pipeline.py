@@ -6,7 +6,7 @@ import tflearn
 from ReplayBuffer import ReplayBuffer
 from QNetwork import QNetwork
 from discrete_2d_grid_world import GridWorld2D
-
+import time
 
 # LOGPATH = "../DDPG/logging/"
 LOGPATH = "./logging/"
@@ -31,7 +31,7 @@ EPS_EPISODES_ANNEAL = 1000
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 1024
+MINIBATCH_SIZE = 128
 
 
 # # ===========================
@@ -53,7 +53,7 @@ def main(_):
     with tf.Session() as sess:
 
 
-        state_dim = 49 + 2 + 1
+        state_dim = 49 + 2 + 1 + 1
         action_dim = 4
 
         QNet = QNetwork(sess, state_dim, action_dim, LEARNING_RATE, TAU, MINIBATCH_SIZE)
@@ -72,7 +72,7 @@ def main(_):
 
         for i in xrange(MAX_EPISODES):
 
-            world = GridWorld2D(10, 10, 1)
+            world = GridWorld2D(50, 50, 10)
 
             ep_reward = 0.0
             ep_ave_q = 0.0
@@ -81,7 +81,7 @@ def main(_):
             status = 0
             # Grab the state features from the environment
             s1 = np.concatenate((np.reshape(world.get_neighborhood_state(7), 49),
-                                np.reshape(world.get_vector_to_goal(), 2),
+                                np.reshape(world.get_vector_to_goal(), 2), np.reshape(world.get_distance_to_goal(), 1),
                                 np.reshape(world.get_distance_to_closest_obstacle(), 1)))
             old_reward = 0
 
@@ -102,10 +102,14 @@ def main(_):
                         for index in range(action_dim):
                             action = np.zeros((action_dim, ))
                             action[index] = 1
+                            # print np.reshape(s, (1, state_dim)).shape
+                            # print np.reshape(action, (1, action_dim)).shape
                             q = QNet.predict_target(np.reshape(s, (1, state_dim)), np.reshape(action, (1, action_dim)))
+                            # print q
                             if q > maxq:
                                 maxq = q
                                 maxq_act = action
+                        # print max_q
 
                 else:
                     index = np.random.choice(4)
@@ -113,20 +117,27 @@ def main(_):
                     action[index] = 1
 
                 # Make action and step forward in time
+                # print s1
                 world.take_action(action)
-                world.display_world()
+                # world.display_world()
+
+                # time.sleep(5)
 
                 # Get new state s_(t+1)
+                # print time.time()
                 s1 = np.concatenate((np.reshape(world.get_neighborhood_state(7), 49),
-                                    np.reshape(world.get_vector_to_goal(), 2),
+                                    np.reshape(world.get_vector_to_goal(), 2), np.reshape(world.get_distance_to_goal(), 1),
                                     np.reshape(world.get_distance_to_closest_obstacle(), 1)))
 
+                # print time.time()
 
 
                 curr_goal_dist = world.get_distance_to_goal()
+                # print time.time()
                 curr_obs_dist = world.get_distance_to_closest_obstacle()
+                # print time.time()
 
-                if (i == MAX_EPISODES - 1) or (curr_goal_dist == 0):
+                if (j == MAX_EP_STEPS - 1) or (curr_goal_dist == 0) or (curr_obs_dist == 0):
                     terminal = True
                 else:
                     terminal = False
@@ -136,10 +147,15 @@ def main(_):
                     # If game has finished, calculate reward based on whether or not a goal was scored
                     if curr_goal_dist == 0:
                         r += 5
+                    elif curr_obs_dist == 0:
+                        r -= 100
 
                     # Else calculate reward as distance between ball and goal
-                    r += curr_goal_dist - old_goal_dist
-                    r += -0.2 * (curr_obs_dist - old_obs_dist)
+                    r += -1 * (curr_goal_dist - old_goal_dist)
+                    r += 0.2 * (curr_obs_dist - old_obs_dist)
+
+                # print r
+                # print "\n\n"
 
                 old_goal_dist = curr_goal_dist
                 old_obs_dist = curr_obs_dist
@@ -156,7 +172,7 @@ def main(_):
                         replay_buffer.sample_batch(MINIBATCH_SIZE)
 
 
-
+                    # print time.time()
                     y_i = []
                     for k in xrange(MINIBATCH_SIZE):
                         if t_batch[k] == True:
@@ -175,14 +191,19 @@ def main(_):
 
                             y_i.append(r_batch[k] + GAMMA * maxq)
 
+                    # print time.time()
+
 
                     predicted_q_value, ep_critic_loss, _ = QNet.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+
+                    # print time.time()
+                    # print "\n\n"
 
                     ep_ave_q += np.mean(predicted_q_value)
                     ep_ave_loss += np.mean(ep_critic_loss)
 
                     # Update the target
-                    critic.update_target_network()
+                    QNet.update_target_network()
                     # break
 
                 ep_reward += r
@@ -198,12 +219,12 @@ def main(_):
                     # writer.flush()
 
                     f = open(LOGPATH +'logs.txt', 'a')
-                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
+                    f.write(str(float(ep_reward)) + "," + str(ep_ave_q / float(j+1))+ "," + str(float(ep_ave_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 
 
                     print('| Reward: ' , float(ep_reward), " | Episode", i, \
-                        '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
+                        '| Qmax:',  (ep_ave_q / float(j+1)), ' | Critic Loss: ', float(ep_ave_loss)/ float(j+1))
 
                     break
             # print "FINISH"

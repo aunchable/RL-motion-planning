@@ -38,6 +38,8 @@ class QNetwork(object):
     def create_q_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         action = tflearn.input_data(shape=[None, self.a_dim])
+        print inputs
+        print action
         net = tflearn.fully_connected(inputs, 400, activation='relu')
 
         # Add the action tensor in the 2nd hidden layer
@@ -68,10 +70,14 @@ class QNetwork(object):
         })
 
     def predict_target(self, inputs, action):
-        return self.sess.run(self.target_out, feed_dict={
+        # print inputs.shape
+        # print action.shape
+        q =  self.sess.run(self.target_out, feed_dict={
             self.target_inputs: inputs,
             self.target_action: action
         })
+        # print q
+        return q
 
     def update_target_network(self):
         self.sess.run(self.update_target_network_params)
