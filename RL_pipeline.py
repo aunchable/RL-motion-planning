@@ -24,7 +24,7 @@ TAU = 0.001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_EPISODES_ANNEAL = 1000
+EPS_EPISODES_ANNEAL = 100
 
 # Directory for storing tensorboard summary results
 # SUMMARY_DIR = './results/tf_ddpg'
