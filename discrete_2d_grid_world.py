@@ -352,6 +352,7 @@ class GridWorld2D:
 
 		# Return n*n grid of world that is centered at robot_loc
 		# Outside of grid boundaries will just be treated as obstacles
+
 		rows = (self.robot_loc[0] - int(n/2), self.robot_loc[0] + int(n/2)  )
 		cols = (self.robot_loc[1] - int(n/2), self.robot_loc[1] + int(n/2)  )
 		neighborhood_grid = np.zeros((n, n))
