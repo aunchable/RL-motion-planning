@@ -224,7 +224,7 @@ class GridWorld2D:
         else:
             self.world[obs_position[0], obs_position[1]] = WORLD['EMPTY']
 
-        print 'OBSTACLE ADDED ' + str(obstacle_added)
+        # print 'OBSTACLE ADDED ' + str(obstacle_added)
         return obstacle_added
 
     # Get wave_front coloring
@@ -299,12 +299,14 @@ class GridWorld2D:
         # Sets robot to specific location (reducing randomness in initialization)
 
         self.world[loc_x, loc_y] = WORLD['ROBOT']
+		self.robot_loc = (loc_x, loc_y)
         return
 
     def set_goal_position(self, loc_x, loc_y):
         # Sets goal to specific location (reducing randomness in initialization)
 
         self.world[loc_x, loc_y] = WORLD['GOAL']
+		self.goal_loc = (loc_x, loc_y)
         return
 
     # one hot vector input [LEFT, RIGHT, UP, DOWN]
@@ -313,28 +315,34 @@ class GridWorld2D:
         # Move robot_loc in action direction
 
         robot_pos = self.robot_loc
+		moved = 0
         # Move Left
         if action[0] == 1:
             if out_of_bounds(robot_pos[0], robot_pos[1] - 1, len(self.world), len(self.world[0])) == False and self.world[robot_pos[0], robot_pos[1] - 1] == WORLD['EMPTY']:
                 self.robot_loc = (robot_pos[0], robot_pos[1] - 1)
                 self.world[robot_pos[0], robot_pos[1] - 1] = WORLD['ROBOT']
+				moved = 1
         # Move Right
         elif action[1] == 1:
             if out_of_bounds(robot_pos[0], robot_pos[1] + 1, len(self.world), len(self.world[0])) == False and self.world[robot_pos[0], robot_pos[1] + 1] == WORLD['EMPTY']:
                 self.robot_loc = (robot_pos[0], robot_pos[1] + 1)
                 self.world[robot_pos[0], robot_pos[1] + 1] = WORLD['ROBOT']
+				moved = 1
         # Move Up
         elif action[2] == 1:
             if out_of_bounds(robot_pos[0] - 1, robot_pos[1], len(self.world), len(self.world[0])) == False and self.world[robot_pos[0] - 1, robot_pos[1]] == WORLD['EMPTY']:
                 self.robot_loc = (robot_pos[0] - 1, robot_pos[1])
                 self.world[robot_pos[0] - 1, robot_pos[1]] = WORLD['ROBOT']
+				moved = 1
         # Move Down
         else:
             if out_of_bounds(robot_pos[0] + 1, robot_pos[1], len(self.world), len(self.world[0])) == False and self.world[robot_pos[0] + 1, robot_pos[1]] == WORLD['EMPTY']:
                 self.robot_loc = (robot_pos[0] + 1, robot_pos[1])
                 self.world[robot_pos[0] + 1, robot_pos[1]] = WORLD['ROBOT']
+				moved = 1
 
-        return
+
+        return moved
 
     # n must be odd
     def get_neighborhood_state(self, n):
@@ -417,7 +425,7 @@ class GridWorld2D:
                 elif self.world[i][j] == WORLD['ROBOT']:
                     lineStr += "R "
                 else:
-                    lineStr += "E "
+                    lineStr += "  "
             print lineStr
 
         return
