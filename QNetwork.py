@@ -51,7 +51,7 @@ class QNetwork(object):
         # Weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
         out = tflearn.fully_connected(net2, 1, weights_init=w_init)
-        return state, action, out
+        return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
         return self.sess.run([self.out, self.loss, self.optimize], feed_dict={

@@ -9,13 +9,13 @@ from discrete_2d_grid_world import GridWorld2D
 
 
 # LOGPATH = "../DDPG/logging/"
-LOGPATH = "/home/snair/logging/"
+LOGPATH = "./logging/"
 
 # Max training steps
 MAX_EPISODES = 500000
 # Max episode length
 MAX_EP_STEPS = 1000
-# Base learning rate 
+# Base learning rate
 LEARNING_RATE = .0001
 # Discount factor
 GAMMA = 0.99
@@ -53,10 +53,10 @@ def main(_):
     with tf.Session() as sess:
 
 
-        state_dim = 25
+        state_dim = 49 + 2 + 1
         action_dim = 4
 
-        QNet = QNetwork(sess, state_dim, action_dim., LEARNING_RATE, TAU, MINIBATCH_SIZE)
+        QNet = QNetwork(sess, state_dim, action_dim, LEARNING_RATE, TAU, MINIBATCH_SIZE)
 
         # # Set up summary Ops
         # summary_ops, summary_vars = build_summaries()
@@ -65,14 +65,14 @@ def main(_):
         # writer = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)
 
         # Initialize target network weights
-        critic.update_target_network()
+        QNet.update_target_network()
 
         # Initialize replay memory
         replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
 
         for i in xrange(MAX_EPISODES):
 
-            world = GridWorld2D(10, 10, np.random.randint(10))
+            world = GridWorld2D(10, 10, 1)
 
             ep_reward = 0.0
             ep_ave_q = 0.0
@@ -80,7 +80,9 @@ def main(_):
 
             status = 0
             # Grab the state features from the environment
-            s1 = world.get_state()
+            s1 = np.concatenate((np.reshape(world.get_neighborhood_state(7), 49),
+                                np.reshape(world.get_vector_to_goal(), 2),
+                                np.reshape(world.get_distance_to_closest_obstacle(), 1)))
             old_reward = 0
 
             for j in xrange(MAX_EP_STEPS):
@@ -112,10 +114,12 @@ def main(_):
 
                 # Make action and step forward in time
                 world.take_action(action)
+                world.display_world()
 
                 # Get new state s_(t+1)
-                s1 = hfo.getState()
-                world.get_state()
+                s1 = np.concatenate((np.reshape(world.get_neighborhood_state(7), 49),
+                                    np.reshape(world.get_vector_to_goal(), 2),
+                                    np.reshape(world.get_distance_to_closest_obstacle(), 1)))
 
 
 
@@ -141,8 +145,8 @@ def main(_):
                 old_obs_dist = curr_obs_dist
 
 
-                replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
-                    terminal, np.reshape(s1, (actor.s_dim,)))
+                replay_buffer.add(np.reshape(s, (state_dim,)), np.reshape(action, (action_dim,)), r, \
+                    terminal, np.reshape(s1, (state_dim,)))
 
                 # Keep adding experience to the memory until
                 # there are at least minibatch size samples
@@ -169,12 +173,12 @@ def main(_):
                                     maxq = q
                                     maxq_act = action
 
-                            y_i.append(r_batch[k] + GAMMA * max_q)
+                            y_i.append(r_batch[k] + GAMMA * maxq)
 
 
                     predicted_q_value, ep_critic_loss, _ = QNet.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
-                    ep_ave_max_q += np.mean(predicted_q_value)
+                    ep_ave_q += np.mean(predicted_q_value)
                     ep_ave_loss += np.mean(ep_critic_loss)
 
                     # Update the target

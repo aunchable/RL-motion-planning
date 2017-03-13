@@ -341,6 +341,8 @@ class GridWorld2D:
 				self.world[robot_pos[0] + 1, robot_pos[1]] = WORLD['ROBOT']
 				moved = 1
 
+		if moved == 1:
+			self.world[robot_pos[0], robot_pos[1]] = WORLD['EMPTY']
 
 		return moved
 
@@ -351,8 +353,6 @@ class GridWorld2D:
 		# Outside of grid boundaries will just be treated as obstacles
 		rows = (self.robot_loc[0] - int(n/2), self.robot_loc[0] + int(n/2)  )
 		cols = (self.robot_loc[1] - int(n/2), self.robot_loc[1] + int(n/2)  )
-		print rows
-		print cols
 		neighborhood_grid = np.zeros((n, n))
 
 		for row in range(rows[0], rows[1] + 1):
@@ -412,9 +412,13 @@ class GridWorld2D:
 		return min(obstacle_dist, border_dist)
 
 	def display_world(self):
+		lineStr = ""
+		for j in range(len(self.world[0]) + 2):
+			lineStr += "X "
+		print lineStr
 		for i in range(len(self.world)):
 			# Initialize string for that line
-			lineStr = ""
+			lineStr = "X "
 			for j in range(len(self.world[i])):
 				# Print O for obstacle, G for goal,
 				# R for robot, and E for empty
@@ -426,8 +430,11 @@ class GridWorld2D:
 					lineStr += "R "
 				else:
 					lineStr += "  "
-			print lineStr
-
+			print lineStr + "X "
+		lineStr = ""
+		for j in range(len(self.world[0]) + 2):
+			lineStr += "X "
+		print lineStr
 		return
 
 	def get_state():
@@ -440,5 +447,3 @@ class GridWorld2D:
 				except:
 					continue
 		return np.append(np.flatten(state), self.get_distance_to_goal())
-
-shiet = GridWorld2D(5, 5, 3)
