@@ -16,7 +16,7 @@ MAX_EPISODES = 500000
 # Max episode length
 MAX_EP_STEPS = 1000
 # Base learning rate
-LEARNING_RATE = .0001
+LEARNING_RATE = .001
 # Discount factor
 GAMMA = 0.99
 # Soft target update param
@@ -24,7 +24,7 @@ TAU = 0.001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_EPISODES_ANNEAL = 1000
+EPS_EPISODES_ANNEAL = 300
 
 # Directory for storing tensorboard summary results
 # SUMMARY_DIR = './results/tf_ddpg'
@@ -48,12 +48,15 @@ MINIBATCH_SIZE = 128
 
 #     return summary_ops, summary_vars
 
+# k x k window
+
 
 def main(_):
     with tf.Session() as sess:
 
+        window_size = 5
 
-        state_dim = 49 + 2 + 1 + 1
+        state_dim = window_size*window_size + 2 + 1 + 1
         action_dim = 4
 
         QNet = QNetwork(sess, state_dim, action_dim, LEARNING_RATE, TAU, MINIBATCH_SIZE)
@@ -72,7 +75,11 @@ def main(_):
 
         for i in xrange(MAX_EPISODES):
 
-            world = GridWorld2D(50, 50, 10)
+            world = GridWorld2D(10, 10, 2)
+            # print world.world.flatten()
+            with open("logging/episode" + str(i) + ".txt",'a') as f_handle:
+                np.savetxt(f_handle,[world.world.flatten()])
+
 
             ep_reward = 0.0
             ep_ave_q = 0.0
@@ -80,9 +87,10 @@ def main(_):
 
             status = 0
             # Grab the state features from the environment
-            s1 = np.concatenate((np.reshape(world.get_neighborhood_state(7), 49),
+            s1 = np.concatenate((np.reshape(world.get_neighborhood_state(window_size), window_size**2),
                                 np.reshape(world.get_vector_to_goal(), 2), np.reshape(world.get_distance_to_goal(), 1),
                                 np.reshape(world.get_distance_to_closest_obstacle(), 1)))
+
             old_reward = 0
 
             for j in xrange(MAX_EP_STEPS):
@@ -118,6 +126,8 @@ def main(_):
 
                 # Make action and step forward in time
                 # print s1
+                with open("logging/episode" + str(i) + ".txt",'a') as f_handle:
+                    np.savetxt(f_handle,[action])
                 world.take_action(action)
                 # world.display_world()
 
@@ -125,7 +135,7 @@ def main(_):
 
                 # Get new state s_(t+1)
                 # print time.time()
-                s1 = np.concatenate((np.reshape(world.get_neighborhood_state(7), 49),
+                s1 = np.concatenate((np.reshape(world.get_neighborhood_state(window_size), window_size**2),
                                     np.reshape(world.get_vector_to_goal(), 2), np.reshape(world.get_distance_to_goal(), 1),
                                     np.reshape(world.get_distance_to_closest_obstacle(), 1)))
 
@@ -218,7 +228,7 @@ def main(_):
                     # writer.add_summary(summary_str, i)
                     # writer.flush()
 
-                    f = open(LOGPATH +'logs.txt', 'a')
+                    f = open(LOGPATH +'logs2.txt', 'a')
                     f.write(str(float(ep_reward)) + "," + str(ep_ave_q / float(j+1))+ "," + str(float(ep_ave_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 
