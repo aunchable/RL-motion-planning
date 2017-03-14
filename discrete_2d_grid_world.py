@@ -1,4 +1,5 @@
 import numpy as np
+from collections import deque
 # import random
 import copy
 
@@ -119,6 +120,7 @@ class GridWorld2D:
 		# TODO: perhaps add check to see if obstacle_count does not change
 		# for a while, only really a problem if have a lot of obstacles:
 
+		self.obs_list = []
 		while obstacle_count < num_obstacles:
 			obstacle_count += self.add_rect_obstacle()
 
@@ -127,6 +129,7 @@ class GridWorld2D:
 		# print 'WAVEFRONT'
 		# print self.wave_front()
 		self.display_world()
+		print(self.world_representation())
 
 	def generate_point_obstacle_at_empty_pos(self):
 		obs_row = np.random.randint(0, len(self.world))
@@ -181,7 +184,7 @@ class GridWorld2D:
 				else:
 					return rectangle_coordinates
 
-		return rectangle_coordinates
+		return sorted(list(set(rectangle_coordinates)))
 
 	def add_rect_obstacle(self):
 
@@ -200,6 +203,7 @@ class GridWorld2D:
 
 		if self.wave_front()[self.robot_loc[0], self.robot_loc[1]] != WORLD['EMPTY']:
 			obstacle_added = 1
+			self.obs_list.append(coordinates)
 		else:
 			for coor in coordinates:
 				self.world[coor[0], coor[1] ] = WORLD['EMPTY']
@@ -222,6 +226,7 @@ class GridWorld2D:
 
 		if self.wave_front()[self.robot_loc[0], self.robot_loc[1]] != WORLD['EMPTY']:
 			obstacle_added = 1
+			self.obs_list.append([obs_position])
 		else:
 			self.world[obs_position[0], obs_position[1]] = WORLD['EMPTY']
 
@@ -264,7 +269,6 @@ class GridWorld2D:
 		return grid
 
 	def set_random_robot_loc(self):
-
 		# Wait till find an empty value and then set it to val
 		row = np.random.randint(0, len(self.world) )
 		col = np.random.randint(0, len(self.world[0]))
@@ -279,7 +283,6 @@ class GridWorld2D:
 		return
 
 	def set_random_goal_loc(self):
-
 		# Set the value in self.world of currently empty (0 value) to passed in val
 		# and set goal location
 
@@ -314,42 +317,38 @@ class GridWorld2D:
 	# do nothing if you can't move in that direction
 	def take_action(self, action):
 		# Move robot_loc in action direction
-
 		robot_pos = self.robot_loc
 		moved = 0
+		new_position = (robot_pos[0], robot_pos[1])
+
 		# Move Left
 		if action[0] == 1:
-			if out_of_bounds(robot_pos[0], robot_pos[1] - 1, len(self.world), len(self.world[0])) == False:
-				self.robot_loc = (robot_pos[0], robot_pos[1] - 1)
-				self.world[robot_pos[0], robot_pos[1] - 1] = WORLD['ROBOT']
-				moved = 1
+			new_position = (robot_pos[0], robot_pos[1] - 1)
+			try_move = 1
 		# Move Right
 		elif action[1] == 1:
-			if out_of_bounds(robot_pos[0], robot_pos[1] + 1, len(self.world), len(self.world[0])) == False:
-				self.robot_loc = (robot_pos[0], robot_pos[1] + 1)
-				self.world[robot_pos[0], robot_pos[1] + 1] = WORLD['ROBOT']
-				moved = 1
+			new_position = (robot_pos[0], robot_pos[1] + 1)
+			try_move = 1
 		# Move Up
 		elif action[2] == 1:
-			if out_of_bounds(robot_pos[0] - 1, robot_pos[1], len(self.world), len(self.world[0])) == False:
-				self.robot_loc = (robot_pos[0] - 1, robot_pos[1])
-				self.world[robot_pos[0] - 1, robot_pos[1]] = WORLD['ROBOT']
-				moved = 1
+			new_position = (robot_pos[0] - 1, robot_pos[1])
+			try_move = 1
 		# Move Down
 		else:
-			if out_of_bounds(robot_pos[0] + 1, robot_pos[1], len(self.world), len(self.world[0])) == False:
-				self.robot_loc = (robot_pos[0] + 1, robot_pos[1])
-				self.world[robot_pos[0] + 1, robot_pos[1]] = WORLD['ROBOT']
-				moved = 1
+			new_position = (robot_pos[0] + 1, robot_pos[1])
+			try_move = 1
 
-		if moved == 1:
-			self.world[robot_pos[0], robot_pos[1]] = WORLD['EMPTY']
+		if try_move == 1:
+			if out_of_bounds(new_position[0], new_position[1], len(self.world), len(self.world[0])) == False:
+				self.robot_loc = new_position
+				self.world[new_position[0], new_position[1]] = WORLD['ROBOT']
+				self.world[robot_pos[0], robot_pos[1]] = WORLD['EMPTY']
+				moved = 1
 
 		return moved
 
 	# n must be odd
 	def get_neighborhood_state(self, n):
-
 		# Return n*n grid of world that is centered at robot_loc
 		# Outside of grid boundaries will just be treated as obstacles
 		rows = (self.robot_loc[0] - int(n/2), self.robot_loc[0] + int(n/2)  )
@@ -366,12 +365,10 @@ class GridWorld2D:
 		return neighborhood_grid
 
 	def get_vector_to_goal(self):
-
 		# Returns vector to goal (delta x by delta y)
 		return (self.goal_loc[0] - self.robot_loc[0], self.goal_loc[1] - self.robot_loc[1]) / np.linalg.norm(np.array([self.goal_loc[0] - self.robot_loc[0], self.goal_loc[1] - self.robot_loc[1]]))
 
 	def get_distance_to_goal(self):
-
 		# Returns Euclidean distance between robot and goal
 		vec_to_goal = (self.goal_loc[0] - self.robot_loc[0], self.goal_loc[1] - self.robot_loc[1])
 		return np.sqrt( (vec_to_goal[0])**2 + (vec_to_goal[1])**2 )
@@ -380,18 +377,17 @@ class GridWorld2D:
 		# Returns Euclidean distance between robot and any obstacle/boundaries of world
 		# Expand out from robot until find an obstacle
 		robot_pos = self.robot_loc
-		queue = getAllNeighbors(robot_pos, self.world)
+		queue = deque(getAllNeighbors(robot_pos, self.world))
 		nearest_obstacle_coor = (0, 0)
 		done = False
 
-		for loc in queue:
+		while len(queue) > 0:
+			loc = queue.popleft()
 			if self.world[loc[0], loc[1]] == WORLD['OBSTACLE']:
 				nearest_obstacle_coor = (loc[0], loc[1])
 				done = True
 				break
 			else:
-				next = queue[0]
-				queue = queue[1:]
 				neighbor_list = getAllNeighbors(next, self.world)
 				for neighbors in neighbor_list:
 					queue.append(neighbors)
@@ -404,35 +400,6 @@ class GridWorld2D:
 		# Get distance to nearest_obstacle_coor
 		obstacle_dist = np.sqrt( (nearest_obstacle_coor[0] - robot_pos[0])**2 + (nearest_obstacle_coor[1] - robot_pos[1])**2 )
 		return min(obstacle_dist, border_dist)
-
-
-
-		# while done == False:
-
-		# 	# Look in current queue
-		# 	for loc in queue:
-		# 		if self.world[loc[0], loc[1]] == WORLD['OBSTACLE']:
-		# 			nearest_obstacle_coor = (loc[0], loc[1])
-		# 			done = True
-		# 			break
-
-		# 	if done == False:
-		# 		# Add to queue
-		# 		orig_queue = copy.deepcopy(queue)
-
-		# 		for loc in orig_queue:
-		# 			neighbor_list = getAllNeighbors(loc, self.world)
-		# 			for neighbors in neighbor_list:
-		# 				queue.append(neighbors)
-
-		# # Get distance to borders:
-		# row_border_dist = min(robot_pos[0], len(self.world) - robot_pos[0] - 1 ) + 1
-		# col_border_dist = min(robot_pos[1], len(self.world[0]) - robot_pos[1] - 1 ) + 1
-		# border_dist = min(row_border_dist, col_border_dist)
-
-		# # Get distance to nearest_obstacle_coor
-		# obstacle_dist = np.sqrt( (nearest_obstacle_coor[0] - robot_pos[0])**2 + (nearest_obstacle_coor[1] - robot_pos[1])**2 )
-		# return min(obstacle_dist, border_dist)
 
 	def display_world(self):
 		lineStr = ""
@@ -460,13 +427,9 @@ class GridWorld2D:
 		print lineStr
 		return
 
-	def get_state():
-		i, j = self.robot_loc
-		state = np.zeros((5,5))
-		for r in state:
-			for c in state[i]:
-				try:
-					state[r,c] = self.world[i - 2 + r,j - 2 + r]
-				except:
-					continue
-		return np.append(np.flatten(state), self.get_distance_to_goal())
+	def world_representation(self):
+		return {
+			'robot_loc': self.robot_loc,
+			'goal_loc': self.goal_loc,
+			'obs_list': self.obs_list
+		}
