@@ -24,7 +24,7 @@ TAU = 0.001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_EPISODES_ANNEAL = 300
+EPS_EPISODES_ANNEAL = 500
 
 # Directory for storing tensorboard summary results
 # SUMMARY_DIR = './results/tf_ddpg'
@@ -128,7 +128,7 @@ def main(_):
                 # print s1
                 with open("logging/episode" + str(i) + ".txt",'a') as f_handle:
                     np.savetxt(f_handle,[action])
-                world.take_action(action)
+                moved = world.take_action(action)
                 # world.display_world()
 
                 # time.sleep(5)
@@ -157,7 +157,7 @@ def main(_):
                     # If game has finished, calculate reward based on whether or not a goal was scored
                     if curr_goal_dist == 0:
                         r += 5
-                    elif curr_obs_dist == 0:
+                    elif curr_obs_dist == 0 or moved == 0:
                         r -= 100
 
                     # Else calculate reward as distance between ball and goal
@@ -228,7 +228,7 @@ def main(_):
                     # writer.add_summary(summary_str, i)
                     # writer.flush()
 
-                    f = open(LOGPATH +'logs2.txt', 'a')
+                    f = open(LOGPATH +'logs3.txt', 'a')
                     f.write(str(float(ep_reward)) + "," + str(ep_ave_q / float(j+1))+ "," + str(float(ep_ave_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 
