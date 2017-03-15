@@ -375,31 +375,37 @@ class GridWorld2D:
 		return np.sqrt( (vec_to_goal[0])**2 + (vec_to_goal[1])**2 )
 
 	def get_distance_to_closest_obstacle(self):
-		# Returns Euclidean distance between robot and any obstacle/boundaries of world
-		# Expand out from robot until find an obstacle
-		robot_pos = self.robot_loc
-		queue = deque(getAllNeighbors(robot_pos, self.world))
-		nearest_obstacle_coor = (0, 0)
-		done = False
+		# # Returns Euclidean distance between robot and any obstacle/boundaries of world
+		# # Expand out from robot until find an obstacle
+		# robot_pos = self.robot_loc
+		# queue = deque(getAllNeighbors(robot_pos, self.world))
+		# nearest_obstacle_coor = (0, 0)
+		# done = False
+		#
+		# while len(queue) > 0:
+		# 	loc = queue.popleft()
+		# 	if self.world[loc[0], loc[1]] == WORLD['OBSTACLE']:
+		# 		nearest_obstacle_coor = (loc[0], loc[1])
+		# 		done = True
+		# 		break
+		# 	else:
+		# 		neighbor_list = getAllNeighbors(next, self.world)
+		# 		for neighbors in neighbor_list:
+		# 			queue.append(neighbors)
 
-		while len(queue) > 0:
-			loc = queue.popleft()
-			if self.world[loc[0], loc[1]] == WORLD['OBSTACLE']:
-				nearest_obstacle_coor = (loc[0], loc[1])
-				done = True
-				break
-			else:
-				neighbor_list = getAllNeighbors(next, self.world)
-				for neighbors in neighbor_list:
-					queue.append(neighbors)
+		robot_pos = self.robot_loc
+		obstacle_dist = float('inf')
+		for obs in self.obs_list:
+			for coord in obs:
+				obstacle_dist = min(obstacle_dist, np.sqrt( (coord[0] - robot_pos[0])**2 + (coord[1] - robot_pos[1])**2 ))
 
 		# Get distance to borders:
 		row_border_dist = min(robot_pos[0], len(self.world) - robot_pos[0] - 1 ) + 1
 		col_border_dist = min(robot_pos[1], len(self.world[0]) - robot_pos[1] - 1 ) + 1
 		border_dist = min(row_border_dist, col_border_dist)
 
-		# Get distance to nearest_obstacle_coor
-		obstacle_dist = np.sqrt( (nearest_obstacle_coor[0] - robot_pos[0])**2 + (nearest_obstacle_coor[1] - robot_pos[1])**2 )
+		# # Get distance to nearest_obstacle_coor
+		# obstacle_dist = np.sqrt( (nearest_obstacle_coor[0] - robot_pos[0])**2 + (nearest_obstacle_coor[1] - robot_pos[1])**2 )
 		return min(obstacle_dist, border_dist)
 
 	def display_world(self):
@@ -434,3 +440,7 @@ class GridWorld2D:
 			'goal_loc': self.goal_loc,
 			'obs_list': self.obs_list
 		}
+
+if __name__ == "__main__":
+	grid = GridWorld2D(10,10,2)
+	print(grid.get_distance_to_closest_obstacle())
