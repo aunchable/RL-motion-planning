@@ -14,7 +14,7 @@ LOGPATH = "./logging/"
 # Max training steps
 MAX_EPISODES = 500000
 # Max episode length
-MAX_EP_STEPS = 1000
+MAX_EP_STEPS = 100
 # Base learning rate
 LEARNING_RATE = .001
 # Discount factor
@@ -24,48 +24,28 @@ TAU = 0.001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_EPISODES_ANNEAL = 500
+EPS_EPISODES_ANNEAL = 1000
 
 # Directory for storing tensorboard summary results
 # SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 128
-
-
-# # ===========================
-# #   Tensorflow Summary Ops
-# # ===========================
-# def build_summaries():
-#     episode_reward = tf.Variable(0.)
-#     tf.summary.scalar("Reward", episode_reward)
-#     episode_ave_max_q = tf.Variable(0.)
-#     tf.summary.scalar("Qmax Value", episode_ave_max_q)
-
-#     summary_vars = [episode_reward, episode_ave_max_q]
-#     summary_ops = tf.summary.merge_all()
-
-#     return summary_ops, summary_vars
-
-# k x k window
-
+MINIBATCH_SIZE = 1024
 
 def main(_):
     with tf.Session() as sess:
 
+        # Define window size
         window_size = 5
 
+        # Sets state and action size based on window size
         state_dim = window_size*window_size + 2 + 1 + 1
         action_dim = 4
 
         QNet = QNetwork(sess, state_dim, action_dim, LEARNING_RATE, TAU, MINIBATCH_SIZE)
 
-        # # Set up summary Ops
-        # summary_ops, summary_vars = build_summaries()
-
         sess.run(tf.global_variables_initializer())
-        # writer = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)
 
         # Initialize target network weights
         QNet.update_target_network()
@@ -73,6 +53,8 @@ def main(_):
         # Initialize replay memory
         replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
 
+
+        # Goes through Episodes
         for i in xrange(MAX_EPISODES):
 
             world = GridWorld2D(10, 10, 2)
@@ -80,7 +62,7 @@ def main(_):
             with open("logging/episode" + str(i) + ".txt",'a') as f_handle:
                 np.savetxt(f_handle,[world.world.flatten()])
 
-
+            # Initialize statistics for each episode
             ep_reward = 0.0
             ep_ave_q = 0.0
             ep_ave_loss = 0.0
@@ -100,10 +82,12 @@ def main(_):
                 # s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
 
                 if replay_buffer.size() > MINIBATCH_SIZE:
+                    # With some probability act randomly
                     if np.random.uniform() < max(0.01, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL):
                         index = np.random.choice(4)
                         action = np.zeros((action_dim, ))
                         action[index] = 1
+                    # Otherwise pick action which maximizes the Q value
                     else:
                         maxq = -1 * float('inf')
                         maxq_act = []
@@ -124,30 +108,24 @@ def main(_):
                     action = np.zeros((action_dim, ))
                     action[index] = 1
 
-                # Make action and step forward in time
-                # print s1
+                # Log action
                 with open("logging/episode" + str(i) + ".txt",'a') as f_handle:
                     np.savetxt(f_handle,[action])
+                # Make action and step forward in time
                 moved = world.take_action(action)
-                # world.display_world()
-
-                # time.sleep(5)
-
                 # Get new state s_(t+1)
-                # print time.time()
+
                 s1 = np.concatenate((np.reshape(world.get_neighborhood_state(window_size), window_size**2),
                                     np.reshape(world.get_vector_to_goal(), 2), np.reshape(world.get_distance_to_goal(), 1),
                                     np.reshape(world.get_distance_to_closest_obstacle(), 1)))
 
-                # print time.time()
 
-
+                # Update current distance measurments
                 curr_goal_dist = world.get_distance_to_goal()
-                # print time.time()
                 curr_obs_dist = world.get_distance_to_closest_obstacle()
-                # print time.time()
 
-                if (j == MAX_EP_STEPS - 1) or (curr_goal_dist == 0) or (curr_obs_dist == 0):
+                # Decide if end of episode has been reached
+                if (j == MAX_EP_STEPS - 1) or (curr_goal_dist == 0) or (moved == 0) or (curr_obs_dist==0):
                     terminal = True
                 else:
                     terminal = False
@@ -162,15 +140,12 @@ def main(_):
 
                     # Else calculate reward as distance between ball and goal
                     r += -1 * (curr_goal_dist - old_goal_dist)
-                    r += 0.2 * (curr_obs_dist - old_obs_dist)
-
-                # print r
-                # print "\n\n"
+                    r += 0.8 * (curr_obs_dist - old_obs_dist)
 
                 old_goal_dist = curr_goal_dist
                 old_obs_dist = curr_obs_dist
 
-
+                # Add experience to memory
                 replay_buffer.add(np.reshape(s, (state_dim,)), np.reshape(action, (action_dim,)), r, \
                     terminal, np.reshape(s1, (state_dim,)))
 
@@ -181,14 +156,12 @@ def main(_):
                     s_batch, a_batch, r_batch, t_batch, s1_batch = \
                         replay_buffer.sample_batch(MINIBATCH_SIZE)
 
-
-                    # print time.time()
                     y_i = []
                     for k in xrange(MINIBATCH_SIZE):
                         if t_batch[k] == True:
                             y_i.append(r_batch[k])
                         else:
-
+                            # Update y_i with action in state t+1 that maximizes Q
                             maxq = -1 * float('inf')
                             maxq_act = []
                             for index in range(action_dim):
@@ -201,14 +174,10 @@ def main(_):
 
                             y_i.append(r_batch[k] + GAMMA * maxq)
 
-                    # print time.time()
-
-
+                    # Train network using minibatch
                     predicted_q_value, ep_critic_loss, _ = QNet.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
-                    # print time.time()
-                    # print "\n\n"
-
+                    # Uodate episode statistics
                     ep_ave_q += np.mean(predicted_q_value)
                     ep_ave_loss += np.mean(ep_critic_loss)
 
@@ -219,16 +188,8 @@ def main(_):
                 ep_reward += r
 
                 if terminal:
-
-                    # summary_str = sess.run(summary_ops, feed_dict={
-                    #     summary_vars[0]: ep_reward,
-                    #     summary_vars[1]: ep_ave_max_q / float(j+1)
-                    # })
-
-                    # writer.add_summary(summary_str, i)
-                    # writer.flush()
-
-                    f = open(LOGPATH +'logs3.txt', 'a')
+                    
+                    f = open(LOGPATH +'logs5.txt', 'a')
                     f.write(str(float(ep_reward)) + "," + str(ep_ave_q / float(j+1))+ "," + str(float(ep_ave_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 

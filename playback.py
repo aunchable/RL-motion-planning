@@ -1,5 +1,6 @@
 import numpy as np 
 
+## This file takes a logged episode and plays it back
 
 WORLD = {
 	'EMPTY': -3,
@@ -8,7 +9,7 @@ WORLD = {
 	'GOAL': 0
 }
 
-EPISODE_NUM = 762
+EPISODE_NUM = 30
 
 with open("logging/episode"+str(EPISODE_NUM)+".txt", 'r') as f:
 	s = f.readline()
@@ -31,6 +32,8 @@ world = np.array(map(int, clean_state)).reshape((10,10))
 print clean_state
 
 print actions
+if len(actions.shape) == 1:
+	actions = np.array([actions])
 
 def display_world(world):
 	lineStr = ""
@@ -66,6 +69,7 @@ display_world(world)
 x, y = player_loc
 k = 1
 for a in actions:
+	player_loc = x, y
 	print x, y
 	index = np.argmax(a)
 	if index == 0:
@@ -76,10 +80,15 @@ for a in actions:
 		x, y = x-1 , y
 	else:
 		x, y = x+1 , y
+	x = max(0, x)
+	y = max(0, y)
 	try:
-		world[x, y] = k
+		if world[x, y] != WORLD['OBSTACLE']:
+			world[x, y] = k
+		else:
+			x, y = player_loc
 	except:
-		continue
+		x, y = player_loc
 	k += 1
 
 
