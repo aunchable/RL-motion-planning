@@ -43,7 +43,8 @@ def main(_):
         state_dim = window_size*window_size + 2 + 1 + 1
         action_dim = 4
 
-        QNet = QNetwork(sess, state_dim, action_dim, LEARNING_RATE, TAU, MINIBATCH_SIZE)
+        QNet = QNetwork(sess, state_dim, action_dim,
+        LEARNING_RATE, TAU, MINIBATCH_SIZE)
 
         sess.run(tf.global_variables_initializer())
 
@@ -69,9 +70,12 @@ def main(_):
 
             status = 0
             # Grab the state features from the environment
-            s1 = np.concatenate((np.reshape(world.get_neighborhood_state(window_size), window_size**2),
-                                np.reshape(world.get_vector_to_goal(), 2), np.reshape(world.get_distance_to_goal(), 1),
-                                np.reshape(world.get_distance_to_closest_obstacle(), 1)))
+            s1 = np.concatenate((
+                np.reshape(world.get_neighborhood_state(window_size),
+                            window_size**2),
+                np.reshape(world.get_vector_to_goal(), 2),
+                np.reshape(world.get_distance_to_goal(), 1),
+                np.reshape(world.get_distance_to_closest_obstacle(), 1)))
 
             old_reward = 0
 
@@ -83,7 +87,8 @@ def main(_):
 
                 if replay_buffer.size() > MINIBATCH_SIZE:
                     # With some probability act randomly
-                    if np.random.uniform() < max(0.01, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL):
+                    if np.random.uniform() < max(0.01,
+                      EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL):
                         index = np.random.choice(4)
                         action = np.zeros((action_dim, ))
                         action[index] = 1
@@ -96,7 +101,8 @@ def main(_):
                             action[index] = 1
                             # print np.reshape(s, (1, state_dim)).shape
                             # print np.reshape(action, (1, action_dim)).shape
-                            q = QNet.predict_target(np.reshape(s, (1, state_dim)), np.reshape(action, (1, action_dim)))
+                            q = QNet.predict_target(np.reshape(s, (1, state_dim)),
+                                    np.reshape(action, (1, action_dim)))
                             # print q
                             if q > maxq:
                                 maxq = q
@@ -115,24 +121,28 @@ def main(_):
                 moved = world.take_action(action)
                 # Get new state s_(t+1)
 
-                s1 = np.concatenate((np.reshape(world.get_neighborhood_state(window_size), window_size**2),
-                                    np.reshape(world.get_vector_to_goal(), 2), np.reshape(world.get_distance_to_goal(), 1),
-                                    np.reshape(world.get_distance_to_closest_obstacle(), 1)))
-
+                s1 = np.concatenate((
+                    np.reshape(world.get_neighborhood_state(window_size),
+                                window_size**2),
+                    np.reshape(world.get_vector_to_goal(), 2),
+                    np.reshape(world.get_distance_to_goal(), 1),
+                    np.reshape(world.get_distance_to_closest_obstacle(), 1)))
 
                 # Update current distance measurments
                 curr_goal_dist = world.get_distance_to_goal()
                 curr_obs_dist = world.get_distance_to_closest_obstacle()
 
                 # Decide if end of episode has been reached
-                if (j == MAX_EP_STEPS - 1) or (curr_goal_dist == 0) or (moved == 0) or (curr_obs_dist==0):
+                if ((j == MAX_EP_STEPS - 1) or (curr_goal_dist == 0) or
+                        (moved == 0) or (curr_obs_dist==0)):
                     terminal = True
                 else:
                     terminal = False
 
                 r = 0.0
                 if j != 0:
-                    # If game has finished, calculate reward based on whether or not a goal was scored
+                    # If game has finished, calculate reward based on whether or
+                    # not a goal was scored
                     if curr_goal_dist == 0:
                         r += 5
                     elif curr_obs_dist == 0 or moved == 0:
@@ -146,7 +156,8 @@ def main(_):
                 old_obs_dist = curr_obs_dist
 
                 # Add experience to memory
-                replay_buffer.add(np.reshape(s, (state_dim,)), np.reshape(action, (action_dim,)), r, \
+                replay_buffer.add(np.reshape(s, (state_dim,)), \
+                    np.reshape(action, (action_dim,)), r, \
                     terminal, np.reshape(s1, (state_dim,)))
 
                 # Keep adding experience to the memory until
@@ -167,7 +178,9 @@ def main(_):
                             for index in range(action_dim):
                                 action = np.zeros((action_dim, ))
                                 action[index] = 1
-                                q = QNet.predict_target(np.reshape(s1_batch[k], (1, state_dim)), np.reshape(action, (1, action_dim)))
+                                q = QNet.predict_target(
+                                    np.reshape(s1_batch[k], (1, state_dim)),
+                                    np.reshape(action, (1, action_dim)))
                                 if q > maxq:
                                     maxq = q
                                     maxq_act = action
@@ -175,7 +188,8 @@ def main(_):
                             y_i.append(r_batch[k] + GAMMA * maxq)
 
                     # Train network using minibatch
-                    predicted_q_value, ep_critic_loss, _ = QNet.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                    predicted_q_value, ep_critic_loss, _ = QNet.train(
+                        s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
                     # Uodate episode statistics
                     ep_ave_q += np.mean(predicted_q_value)
@@ -188,14 +202,19 @@ def main(_):
                 ep_reward += r
 
                 if terminal:
-                    
+
                     f = open(LOGPATH +'logs5.txt', 'a')
-                    f.write(str(float(ep_reward)) + "," + str(ep_ave_q / float(j+1))+ "," + str(float(ep_ave_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
+                    f.write(str(float(ep_reward)) + "," +
+                        str(ep_ave_q / float(j+1))+ "," +
+                        str(float(ep_ave_loss)/ float(j+1)) + "," +
+                        str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) +
+                        "\n")
                     f.close()
 
 
                     print('| Reward: ' , float(ep_reward), " | Episode", i, \
-                        '| Qmax:',  (ep_ave_q / float(j+1)), ' | Critic Loss: ', float(ep_ave_loss)/ float(j+1))
+                        '| Qmax:',  (ep_ave_q / float(j+1)), \
+                        ' | Critic Loss: ', float(ep_ave_loss)/ float(j+1))
 
                     break
             # print "FINISH"

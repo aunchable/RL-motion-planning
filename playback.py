@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 
 ## This file takes a logged episode and plays it back
 
@@ -15,8 +15,8 @@ with open("logging/episode"+str(EPISODE_NUM)+".txt", 'r') as f:
 	s = f.readline()
 actions = np.loadtxt("logging/episode"+str(EPISODE_NUM)+".txt", skiprows =1)
 
-# s = np.array(map(int, s.replace("+", "").replace("e", "").replace("0", "").replace(".", "").split("\t")))
-s = s.replace("+", "").replace("e", "").replace("\n", "").replace(".", "").replace("0", "").split(" ")
+s = (s.replace("+", "").replace("e", "").replace("\n", "").\
+	replace(".", "").replace("0", "").split(" "))
 
 clean_state = []
 for i, st in enumerate(s):
@@ -94,7 +94,3 @@ for a in actions:
 
 display_world(world)
 print player_loc
-
-
-
-

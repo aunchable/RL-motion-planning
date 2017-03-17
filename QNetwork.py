@@ -8,7 +8,8 @@ class QNetwork(object):
     Input to the network is the state and action, output is Q(s,a).
     The action must be obtained from the output of the Actor network.
     """
-    def __init__(self, sess, state_dim, action_dim, learning_rate, tau, MINIBATCH_SIZE):
+    def __init__(self, sess, state_dim, action_dim, learning_rate, tau,
+    MINIBATCH_SIZE):
         self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
@@ -20,12 +21,16 @@ class QNetwork(object):
         self.network_params = tf.trainable_variables()
 
         # Target Network
-        self.target_inputs, self.target_action, self.target_out = self.create_q_network()
-        self.target_network_params = tf.trainable_variables()[len(self.network_params):]
+        self.target_inputs, self.target_action,
+        self.target_out = self.create_q_network()
+        self.target_network_params = \
+            tf.trainable_variables()[len(self.network_params):]
 
         # Op for periodically updating target network with online network weights with regularization
         self.update_target_network_params = \
-            [self.target_network_params[i].assign(tf.multiply(self.network_params[i], self.tau) + tf.multiply(self.target_network_params[i], 1. - self.tau))
+            [self.target_network_params[i].assign(
+                tf.multiply(self.network_params[i], self.tau) + \
+                tf.multiply(self.target_network_params[i], 1. - self.tau))
                 for i in range(len(self.target_network_params))]
 
         # Network target (y_i)
@@ -33,7 +38,8 @@ class QNetwork(object):
 
         # Define loss and optimization Op
         self.loss = tflearn.mean_square(self.predicted_q_value, self.out)
-        self.optimize = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+        self.optimize = tf.train.AdamOptimizer(
+            self.learning_rate).minimize(self.loss)
 
     def create_q_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
@@ -47,7 +53,10 @@ class QNetwork(object):
         t1 = tflearn.fully_connected(net, 300)
         t2 = tflearn.fully_connected(action, 300)
 
-        net2 = tflearn.activation(tflearn.merge([tf.matmul(net,t1.W), tf.matmul(action, t2.W)], 'concat'), activation='relu')
+        net2 = tflearn.activation(
+            tflearn.merge(
+                [tf.matmul(net,t1.W), tf.matmul(action, t2.W)], 'concat'),
+            activation='relu')
 
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]

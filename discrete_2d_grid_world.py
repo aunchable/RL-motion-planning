@@ -130,7 +130,8 @@ class GridWorld2D:
 		# that are in-bounds in the world.
 		for i in range(tl_coor[0], tl_coor[0] + rows):
 			for j in range(tl_coor[1], tl_coor[1] + cols):
-				if out_of_bounds(i, j, len(self.world), len(self.world[0]) ) == False:
+				if out_of_bounds(i, j, len(self.world),
+				len(self.world[0]) ) == False:
 					rectCoors.append((i, j))
 
 		return rectCoors
@@ -161,11 +162,13 @@ class GridWorld2D:
 		for i in range(obs_tl_row, row_last):
 			for j in range(obs_tl_col, col_last):
 				# Get rectangle coordinates
-				rectCoor = self.getRectangleCoordinates(i - obs_tl_row + 1, j - obs_tl_col + 1, tl_coor)
+				rectCoor = self.getRectangleCoordinates(i - obs_tl_row + 1,
+				j - obs_tl_col + 1, tl_coor)
 				all_free = True
 				# Check if all of these coordinates are empty in the world
 				for k in range(len(rectCoor)):
-					if self.world[rectCoor[k][0], rectCoor[k][1]] != WORLD['EMPTY']:
+					if self.world[rectCoor[k][0],
+					rectCoor[k][1]] != WORLD['EMPTY']:
 						all_free = False
 
 				# If all of these coordinates are free, add them to the list
@@ -200,7 +203,8 @@ class GridWorld2D:
 		# it was added. The existence of a path between the goal
 		# and the robot is determined by whether the wavefront can
 		# reach the robot location.
-		if self.wave_front()[self.robot_loc[0], self.robot_loc[1]] != WORLD['EMPTY']:
+		if self.wave_front()[self.robot_loc[0],
+		self.robot_loc[1]] != WORLD['EMPTY']:
 			obstacle_added = 1
 			self.obs_list.append(coordinates)
 		# If the obstacle cannot be added without eliminating paths
@@ -281,14 +285,16 @@ class GridWorld2D:
 
 	# Set specific robot position in the grid
 	def set_robot_position(self, loc_x, loc_y):
-		# Sets robot to specific location (reducing randomness in initialization)
+		# Sets robot to specific location (reducing randomness in
+		# initialization)
 		self.world[loc_x, loc_y] = WORLD['ROBOT']
 		self.robot_loc = (loc_x, loc_y)
 		return
 
 	# Set specific robot position in the grid
 	def set_goal_position(self, loc_x, loc_y):
-		# Sets goal to specific location (reducing randomness in initialization)
+		# Sets goal to specific location (reducing randomness in
+		# initialization)
 		self.world[loc_x, loc_y] = WORLD['GOAL']
 		self.goal_loc = (loc_x, loc_y)
 		return
@@ -322,7 +328,8 @@ class GridWorld2D:
 		# If a move was successful, indicate this. Otherwise, indicate
 		# that the robot could not be moved.
 		if try_move == 1:
-			if out_of_bounds(new_position[0], new_position[1], len(self.world), len(self.world[0])) == False:
+			if out_of_bounds(new_position[0], new_position[1],
+			len(self.world), len(self.world[0])) == False:
 				self.robot_loc = new_position
 				self.world[new_position[0], new_position[1]] = WORLD['ROBOT']
 				self.world[robot_pos[0], robot_pos[1]] = WORLD['EMPTY']
@@ -344,20 +351,27 @@ class GridWorld2D:
 		# location.
 		for row in range(rows[0], rows[1] + 1):
 			for col in range(cols[0], cols[1] + 1):
-				if out_of_bounds(row, col, len(self.world), len(self.world[0])  ) == False:
-					neighborhood_grid[ row - rows[0], col - cols[0] ] = self.world[row][col]
+				if out_of_bounds(row, col, len(self.world),
+				len(self.world[0])  ) == False:
+					neighborhood_grid[ row - rows[0],
+					col - cols[0] ] = self.world[row][col]
 				else:
-					neighborhood_grid[ row - rows[0], col - cols[0] ] = WORLD['OBSTACLE']
+					neighborhood_grid[ row - rows[0],
+					col - cols[0] ] = WORLD['OBSTACLE']
 
 		return neighborhood_grid
 
 	# Returns unit vector to goal
 	def get_vector_to_goal(self):
-		return (self.goal_loc[0] - self.robot_loc[0], self.goal_loc[1] - self.robot_loc[1]) / np.linalg.norm(np.array([self.goal_loc[0] - self.robot_loc[0], self.goal_loc[1] - self.robot_loc[1]]))
+		return (self.goal_loc[0] - self.robot_loc[0],
+		self.goal_loc[1] - self.robot_loc[1]) / np.linalg.norm(np.array(
+		[self.goal_loc[0] - self.robot_loc[0],
+		self.goal_loc[1] - self.robot_loc[1]]))
 
 	# Returns Euclidean distance between robot and goal
 	def get_distance_to_goal(self):
-		vec_to_goal = (self.goal_loc[0] - self.robot_loc[0], self.goal_loc[1] - self.robot_loc[1])
+		vec_to_goal = (self.goal_loc[0] - self.robot_loc[0],
+		self.goal_loc[1] - self.robot_loc[1])
 		return np.sqrt( (vec_to_goal[0])**2 + (vec_to_goal[1])**2 )
 
 	# Get the distance from the robot to the nearest obstacle or edge of the
@@ -370,11 +384,15 @@ class GridWorld2D:
 		obstacle_dist = float('inf')
 		for obs in self.obs_list:
 			for coord in obs:
-				obstacle_dist = min(obstacle_dist, np.sqrt( (coord[0] - robot_pos[0])**2 + (coord[1] - robot_pos[1])**2 ))
+				obstacle_dist = min(obstacle_dist,
+				np.sqrt( (coord[0] - robot_pos[0])**2 + (
+				coord[1] - robot_pos[1])**2 ))
 
 		# Get minimum distance to borders:
-		row_border_dist = min(robot_pos[0], len(self.world) - robot_pos[0] - 1 ) + 1
-		col_border_dist = min(robot_pos[1], len(self.world[0]) - robot_pos[1] - 1 ) + 1
+		row_border_dist = min(robot_pos[0],
+		len(self.world) - robot_pos[0] - 1 ) + 1
+		col_border_dist = min(robot_pos[1],
+		len(self.world[0]) - robot_pos[1] - 1 ) + 1
 		border_dist = min(row_border_dist, col_border_dist)
 
 		# Return the minimum distance to a forbidden space (obstacle
